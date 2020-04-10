@@ -1,0 +1,5 @@
+/src/out
+/src/build
+.vscode
+.vs
+.DS_Store

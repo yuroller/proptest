@@ -1,0 +1,441 @@
+<meta charset="utf-8" lang="en">
+
+**Test di proprietà**
+
+    in C++ con [rapidcheck](https://github.com/emil-e/rapidcheck)
+
+<small><em>9 Aprile 2020</em></small><br>
+Yuri Valentini
+
+---
+
+## Sommario
+
+* Yuri Valentini
+* Test di unità
+* Approccio basato su proprietà
+* Introduzione a rapidcheck
+* Diamond Kata
+* Individuare le proprietà
+* Uso avanzato di rapidcheck
+* Test stateful
+* Domande e risposte
+
+---
+
+## Chi è Yuri Valentini
+
+* sw embedded, biomedicale, VOIP
+* C/C++, Python, C#
+* TDD, XP (non windows)
+* programmazione ad oggetti
+* stampa 3D con [OpenSCAD](http://www.openscad.org/)
+* ... programmazione funzionale
+* http://github.com/yuroller
+
+---
+
+# Test di unità
+
+---
+
+## Anatomia dei test di unità
+
+Schema di funzionamento:
+
+1. prepara i dati di ingresso
+2. esegui una operazione sui dati
+3. verifica qualcosa sul risultato
+
+---
+
+## Test di unità con [GoogleTest](https://github.com/google/googletest)
+
+    ```c++
+    #include &lt;gtest/gtest.h&gt;
+
+    TEST(SommaTest, UnoPiuUnoFaDue) {
+        EXPECT_EQ(2, somma(1, 1));
+    }
+
+    TEST(SommaTest, DuePiuDueFaQuattro) {
+        EXPECT_EQ(4, somma(2, 2));
+    }
+    ```
+
+---
+
+## Caratteristiche test di unità
+
+* facili da comprendere/scrivere
+* verificano casi specifici (esempi)
+* utili per evitare regressioni
+
+---
+
+>>> in TDD si implementa la soluzione minima
+>>> per passare i test
+
+
+## Svantaggi test di unità
+
+* difficile capire quando si è finito
+* può portare a mancanza di generalità (es. TDD)
+* molti test per garantire copertura
+
+---
+
+## Implementazione "fantasiosa"
+
+Errata ma fa passare i test precedenti
+
+    ```c++
+    int somma(int a, int b) {
+        return a + a;
+    }
+    ```
+
+---
+
+# Test di proprietà
+
+---
+
+## Anatomia dei test di proprietà
+
+Schema di funzionamento:
+
+1. per *tutti* i dati di ingresso<br>
+    che soddisfano certi criteri
+2. esegui una operazione sui dati
+3. verifica qualcosa sul risultato
+
+Per test di unità il primo punto è:
+* prepara i dati di ingresso
+
+---
+
+## Caratteristiche test di proprietà
+
+* coprono l'intero spazio di input
+* input minimale per fallimenti
+* randomizzati ma riproducibili
+* spingono maggiormente a ragionare
+* sono test più generali
+* possono rivelare casi impensabili
+* assicurano di avere capito bene i requisiti
+
+---
+
+## Proprietà di somma()
+
+* Proprietà commutativa
+```text
+somma(a, b) == somma(b, a)
+```
+* Proprietà associativa
+```text
+somma(somma(a, b), c) == somma(a, somma(b, c))
+```
+* Elemento neutro
+```text
+somma(0, a) == a
+```
+
+---
+
+# Introduzione a rapidcheck
+
+https://github.com/emil-e/rapidcheck
+
+---
+
+## Caratteristiche rapidcheck
+
+* Framework C++ per test basati sulle proprietà
+* Ispirato a [QuickCheck](http://www.cse.chalmers.se/~rjmh/QuickCheck/) di Haskell
+* Permette di scrivere le proprietà in stile imperativo
+* Contiene modulo di riduzione input
+* Supporto per i tipi STL (anche std::map e std::set)
+* Creazione di generatori di input molto flessibile
+* Test stateful
+* Integrazione con altri framework di test (GoogleTest, ecc.)
+
+---
+
+## Moduli di rapidcheck
+
+Stessi moduli di QuickCheck e di molti altri framework:
+
+* generatore
+* valutatore (API per descrivere proprietà)
+* riduttore di input (shrinker)
+
+---
+
+## Esempio "da manuale"
+
+    ```c++
+    #include <rapidcheck.h>
+    #include <vector>
+    #include <algorithm>
+    
+    int main() {
+      rc::check("double reversal yields the original value",
+                [](const std::vector<int> &l0) {
+                  auto l1 = l0;
+                  std::reverse(std::begin(l1), std::end(l1));
+                  std::reverse(std::begin(l1), std::end(l1));
+                  RC_ASSERT(l0 == l1); // return l0 == l1;
+                });
+    
+      return 0;
+    }
+    ```
+
+---
+
+## Precondizioni
+
+    ```c++
+    rc::check([](const std::string &str) {
+        RC_PRE((str.size() % 2) == 0);
+        // ...
+    });
+    ```
+
+!!!
+    Il valutatore rinuncia con condizioni troppo restrittive
+
+---
+
+## Generatori
+    
+    ```c++
+    auto n = *rc::gen::arbitrary&lt;int&gt;();
+    auto i = *rc::gen::inRange(0, 10); // 0..9
+    ```
+
+Supporta [tipi STL e tipi personalizzati](https://github.com/emil-e/rapidcheck/blob/master/doc/generators.md#arbitrary)
+
+---
+
+>>> EFDH (Enterprise Developer From Hell) di Scott Wlaschin
+>>> crea codice che fa passare test con specifici esempi
+
+
+## Diamond Kata
+
+Data una lettera, creare un rombo che comincia per 'A' con la
+lettera fornita nel punto piu' ampio.
+
+Per esempio: crea_rombo('C') fornisce
+
+```text
+"  A  "
+" B B "
+"C   C"
+" B B "
+"  A  "
+```
+
+---
+
+# Individuare le proprietà
+
+* [Presentazione](https://www.slideshare.net/ScottWlaschin/an-introduction-to-property-based-testing) di Scott Wlaschin (pagine 73-89)
+* [Video](https://www.youtube.com/watch?v=p84DMv8TQuo) di Andrea Leopardi (dal minuto 14)
+
+---
+
+## Funzioni simmetriche
+
+    ```c++
+    decode(encode(term)) == term;
+    ```
+
+Esempi:
+* serializzazione/deserializzazione di oggetti (JSON, XML, ecc.)
+* escape/unescape di stringhe (URLEncode, ecc.)
+
+---
+
+## Funzioni reversibili
+
+************************************
+*      +--------------------+      *
+*      |      reverse       v      *
+* .----+----.          .---------. *
+* | [2;3;1] |          | [1;3;2] | *
+* '---------'          '----+----' *
+*      ^      reverse       |      *
+*      +--------------------+      *
+************************************
+
+---
+
+## Invarianti
+
+Esempi:
+
+    * sort() non cambia il numero di elementi
+    * gli elementi dopo sort() sono quelli di input
+    * un albero binario bilanciato, rimane tale dopo inserimenti
+
+---
+
+## Percorsi differenti, stessa destinazione
+
+Per testare sort() sfrutto la simmetria dei punti sull'origine
+
+******************************************
+* -------------------------------------> *
+*     -3  -2  -1   0   1   2   3         *
+******************************************
+
+******************************************
+* .------------.   sort   .------------. *
+* | [-2;-3;-1] +--------->| [-3;-2;-1] | *
+* '------------'          '------------' *
+*       ^                       ^        *
+*       |negate           negate|        *
+*       |                reverse|        *
+* .-----+------.   sort   .-----+------. *
+* |  [2;3;1]   +--------->|  [1;2;3]   | *
+* '------------'          '------------' *
+******************************************
+
+---
+
+## Proprietà matematiche
+
+Posso sfruttare:
+
+* commutatività
+* associatività
+* idempotenza (es. sort(), find_if())
+* proprietà funzionali (es. leggi delle monadi e funtori)
+* induzione strutturale es.:
+    1. dopo il sort() qualunque slice è ordinato
+    2. relazione fra i nodi di un albero bilanciato ordinato
+
+---
+
+## Problemi asimmetrici
+
+Difficili da implementare, ma facili da verificare
+
+    ```c++
+    std::vector&lt;int&gt; fattorizza(int n) {
+        // implementazione
+        return ...;
+    }
+    ```
+Verifico che il prodotto in uscita sia il numero in input
+
+---
+
+## Oracolo
+
+Implementazione corretta già esistente:
+
+* da un vecchio sistema da reimplementare
+* con algoritmo poco performante (es. brute force, complessità esponziale)
+
+Verifico che:
+
+    ```text
+    vecchia_implementazione(input) == nuova_implementazione(input)
+    ```
+
+---
+
+## Smoke test
+
+Prendere confidenza con un metodo di un sistema esistente:
+
+* verificare che il risultato sia sempre non null
+* restituisce valori in un range
+
+!!!
+    Qui non verifichiamo la correttezza, ma rafforziamo le nostre assunzioni
+
+---
+
+## Uso avanzato di rapidcheck
+
+Configurazione con variabile d'ambiente RC_PARAMS:
+
+    * `seed=value` riprodurre le condizioni di test
+    * `reproduce=state_string` per fare debug del caso fallito
+    * `max_success=value` (default=100) quanti input generare
+
+!!!
+    Nel build server è utile alzare `max_success` per avere una copertura più completa
+
+---
+
+## Test stateful
+
+    ```c++
+    class contatore {
+        int acc_ = 0;
+    public:
+        int acc() const { return acc_; }
+        void inc() { acc_++; }
+        void dec() { acc_--; }
+    };
+    ```
+
+*****************************************
+* 0   1   2   1   2   1   0   1   2     *
+* ------------------------------------> *
+*     +   +   -   +   -   -   +   +     *
+*****************************************
+
+rapidcheck può generare [sequenze di comandi](https://github.com/emil-e/rapidcheck/blob/master/doc/state_ref.md)
+
+---
+
+# Domande e risposte
+
+---
+
+# Grazie
+
+> "Be lazy! Don't write tests,
+>    generate them!"
+
+-- Scott Wlaschin
+
+<!-- Markdeep slides stuff -->
+<script>
+    markdeepSlidesOptions = {
+        aspectRatio: 16 / 9,
+        theme: 'simple',
+        fontSize: 28,
+        diagramZoom: 1.0,
+        totalSlideNumber: false,
+        progressBar: true,
+        breakOnHeadings: false,
+        slideChangeHook: (oldSlide, newSlide) => {},
+        modeChangeHook: (newMode) => {}
+    };
+</script>
+<link rel="stylesheet" href="markdeep-slides/lib/markdeep-relative-sizes/1.09/relativize.css">
+<link rel="stylesheet" href="markdeep-slides/markdeep-slides.css">
+<script src="markdeep-slides/markdeep-slides.js"></script>
+
+<!-- Markdeep stuff -->
+<script>
+    markdeepOptions = {
+        tocStyle: 'none',
+        detectMath: false,
+        onLoad: function() {
+            initSlides();
+        }
+    };
+</script>
+<style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospace}</style>
+<script src="markdeep-slides/lib/markdeep/1.09/markdeep.min.js" charset="utf-8"></script>
+<script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>

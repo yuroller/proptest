@@ -1,0 +1,3 @@
+[submodule "src/rapidcheck"]
+	path = src/rapidcheck
+	url = https://github.com/emil-e/rapidcheck.git
